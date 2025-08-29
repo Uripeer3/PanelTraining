@@ -13,4 +13,5 @@ dependencies = [
 [dependency-groups]
 notebook = [
     "ipykernel>=6.30.1",
+    "jupyter-bokeh>=4.0.5",
 ]

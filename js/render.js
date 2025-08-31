@@ -113,7 +113,7 @@ function setupDrawingTools(self, data, state) {
         edit: {featureGroup: state.drawnItems},
         draw: {
             polygon: true,
-            polyline: false,
+            polyline: true,
             rectangle: false,
             circle: true,
             marker: false,

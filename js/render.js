@@ -231,7 +231,8 @@ function setupHover(self, data, state) {
     // Hover configuration/index
     state.hoverThresholdPx = 25;             // max pixel distance to snap
     state.gridCell = state.hoverThresholdPx; // grid size for spatial index in pixels
-    state.hoverIndex = null;                 // Map: "cx:cy" -> array of {x, y, latlng}
+    // Map: "cx:cy" -> array of {x, y, latlng, feature}
+    state.hoverIndex = null;
     state.hoverIndexBounds = null;           // Optional bounds of the index
     state.geojsonHoverable = state.geojsonHoverable || {};
 
@@ -270,16 +271,20 @@ function setupHover(self, data, state) {
                         const d = Math.sqrt(dxp * dxp + dyp * dyp);
                         if (d < bestDist) {
                             bestDist = d;
-                            best = o.latlng;
+                            best = o;
                         }
                     }
                 }
             }
 
-            // Show/hide the hover marker depending on distance
+            // Show/hide the hover marker depending on distance and dispatch feature data
             if (best && bestDist <= state.hoverThresholdPx) {
-                state.hover.setLatLng(best);
+                state.hover.setLatLng(best.latlng);
                 if (!state.map.hasLayer(state.hover)) state.map.addLayer(state.hover);
+
+                // Fire a DOM event with the hovered feature's GeoJSON so other components can react
+                const detail = {feature: best.feature, latlng: best.latlng};
+                window.dispatchEvent(new CustomEvent('hover_layer', {detail}));
             } else {
                 if (state.map.hasLayer(state.hover)) state.map.removeLayer(state.hover);
             }
@@ -322,7 +327,8 @@ function setupHover(self, data, state) {
                         if (!isFinite(pt.x) || !isFinite(pt.y)) return;
                         const cell = state._cellKeyFromPoint(pt);
                         if (!idx.has(cell.key)) idx.set(cell.key, []);
-                        idx.get(cell.key).push({x: pt.x, y: pt.y, latlng: ll});
+                        const feat = sub.feature ? sub.feature : (sub.toGeoJSON ? sub.toGeoJSON() : null);
+                        idx.get(cell.key).push({x: pt.x, y: pt.y, latlng: ll, feature: feat});
                         if (pt.x < minX) minX = pt.x;
                         if (pt.x > maxX) maxX = pt.x;
                         if (pt.y < minY) minY = pt.y;

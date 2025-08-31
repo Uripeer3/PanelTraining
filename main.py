@@ -11,7 +11,7 @@ SHOW_HOVER_JS = (JS_DIR / "show_hover.js").read_text()
 SYNC_GEOJSON_JS = (JS_DIR / "sync_geojson.js").read_text()
 
 
-class LeafletCanvasScatter(ReactiveHTML):
+class AdvancedLeafletCanvas(ReactiveHTML):
     """Leaflet map with chroma.js colormap + Canvas-Scatter for high-performance scatter, with draw + measure + fullscreen."""
 
     # Data/state
@@ -239,7 +239,7 @@ def create_example_app(n: int = 20000) -> pn.Row:
     lat = 37.3 + 0.1 * np.sin(np.linspace(0, 2 * np.pi, n))
     lon = -122.0 + 0.1 * np.cos(np.linspace(0, 2 * np.pi, n))
 
-    leaf = LeafletCanvasScatter(
+    leaf = AdvancedLeafletCanvas(
         cmap="Inferno",
         container_style="width:600px;height:500px;border:1px solid gray;",
         show_hover=True,

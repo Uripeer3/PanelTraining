@@ -681,8 +681,8 @@ pn.extension("leaflet")
 
 # Generate large dataset
 n = 20000
-lat = 37.3 + 0.1 * np.sin(np.linspace(0, 50 * np.pi, n))
-lon = -122.0 + 0.1 * np.cos(np.linspace(0, 50 * np.pi, n))
+lat = 37.3 + 0.1 * np.sin(np.linspace(0, 2 * np.pi, n))
+lon = -122.0 + 0.1 * np.cos(np.linspace(0, 2 * np.pi, n))
 
 leaf = LeafletCanvasScatter(
     cmap="Inferno",
@@ -695,8 +695,8 @@ leaf.add_scatter(
     name="Example Scatter",
     lats=list(map(float, lat)),
     lons=list(map(float, lon)),
-    values=list(map(float, np.linspace(-3, 10e10, n))),
-    cmap="Jet",
+    values=list(map(float, np.linspace(-1, 1, n))),
+    cmap="Viridis",
     radius=3,
     fill_opacity=0.8,
     hoverable=True,

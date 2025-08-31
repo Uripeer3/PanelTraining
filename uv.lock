@@ -606,6 +606,7 @@ name = "panelstraining"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "bokeh" },
     { name = "numpy" },
     { name = "panel" },
     { name = "scipy" },
@@ -619,6 +620,7 @@ notebook = [
 
 [package.metadata]
 requires-dist = [
+    { name = "bokeh", specifier = ">=3.7.3" },
     { name = "numpy", specifier = ">=2.3.2" },
     { name = "panel", specifier = ">=1.7.5" },
     { name = "scipy", specifier = ">=1.16.1" },

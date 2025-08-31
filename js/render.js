@@ -61,6 +61,48 @@ function configureOverlays(self, data, state) {
 
 }
 
+// Format GeoJSON feature properties into a readable string for tooltips on drawn items.
+function featureText(feature) {
+    if (feature && feature.properties) {
+        if (feature.properties.tooltip) return feature.properties.tooltip;
+        if (feature.properties.name) return feature.properties.name;
+        return Object.entries(feature.properties)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(', ');
+    }
+    return '';
+}
+
+// Compute area/radius measurements for supported layers and attach a tooltip string.
+function annotateMeasurements(layer) {
+    const feature = layer.toGeoJSON();
+    feature.properties = feature.properties || {};
+
+    if (layer instanceof L.Polygon) {
+        try {
+            const latlngs = layer.getLatLngs()[0];
+            const area = Math.abs(L.GeometryUtil.geodesicArea(latlngs));
+            const readable = area >= 1e6
+                ? `${(area / 1e6).toLocaleString(undefined, {maximumFractionDigits: 2})} km<sup>2</sup>`
+                : `${area.toLocaleString(undefined, {maximumFractionDigits: 2})} m<sup>2</sup>`;
+            feature.properties.area = area;
+            feature.properties.tooltip = `Area: ${readable}`;
+        } catch (e) {
+            /* noop */
+        }
+    } else if (layer instanceof L.Circle) {
+        const r = layer.getRadius();
+        const area = Math.PI * r * r;
+        const readableR = r >= 1000
+            ? `${(r / 1000).toLocaleString(undefined, {maximumFractionDigits: 2})} km`
+            : `${r.toLocaleString(undefined, {maximumFractionDigits: 2})} m`;
+        feature.properties.radius = r;
+        feature.properties.area = area;
+        feature.properties.tooltip = `Radius: ${readableR}`;
+    }
+    return feature;
+}
+
 
 function setupDrawingTools(self, data, state) {
     // We store user-drawn shapes in a FeatureGroup so they can be edited/removed as a set.
@@ -71,7 +113,7 @@ function setupDrawingTools(self, data, state) {
         edit: {featureGroup: state.drawnItems},
         draw: {
             polygon: true,
-            polyline: false,
+            polyline: true,
             rectangle: false,
             circle: true,
             marker: false,
@@ -79,6 +121,22 @@ function setupDrawingTools(self, data, state) {
         }
     });
     state.map.addControl(state.drawControl);
+
+    function recomputeDrawnShapes() {
+        const features = [];
+        state.drawnItems.eachLayer(function (layer) {
+            const feat = annotateMeasurements(layer);
+            const text = featureText(feat);
+            const tt = layer.getTooltip && layer.getTooltip();
+            if (tt) {
+                tt.setContent(text);
+            } else {
+                layer.bindTooltip(text, {className: 'drawn-tooltip'});
+            }
+            features.push(feat);
+        });
+        data.drawn_shapes = features;
+    }
     state.map.on('draw:editstart', function () {
         state.centroidHandles = [];
 
@@ -129,8 +187,7 @@ function setupDrawingTools(self, data, state) {
                 });
 
                 handle.on('dragend', function () {
-                    data.drawn_shapes = state.drawnItems.toGeoJSON().features;
-
+                    recomputeDrawnShapes();
                     // Recompute centroid and reset handle there
                     centroid = layer.getCenter();
                     handle.setLatLng(centroid);
@@ -152,17 +209,14 @@ function setupDrawingTools(self, data, state) {
 
     // Sync draw events back to Python: convert to GeoJSON on every change
     state.map.on(L.Draw.Event.CREATED, function (e) {
-        // Add the new shape to the edit group and append its GeoJSON to Python's list
         state.drawnItems.addLayer(e.layer);
-        data.drawn_shapes = [...data.drawn_shapes, e.layer.toGeoJSON()];
+        recomputeDrawnShapes();
     });
-    state.map.on('draw:deleted', function (e) {
-        // Replace Python-side list with the remaining shapes
-        data.drawn_shapes = state.drawnItems.toGeoJSON().features;
+    state.map.on('draw:deleted', function () {
+        recomputeDrawnShapes();
     });
-    state.map.on('draw:edited', function (e) {
-        // Replace Python-side list with the updated shapes
-        data.drawn_shapes = state.drawnItems.toGeoJSON().features;
+    state.map.on('draw:edited', function () {
+        recomputeDrawnShapes();
     });
 
 }
@@ -177,7 +231,8 @@ function setupHover(self, data, state) {
     // Hover configuration/index
     state.hoverThresholdPx = 25;             // max pixel distance to snap
     state.gridCell = state.hoverThresholdPx; // grid size for spatial index in pixels
-    state.hoverIndex = null;                 // Map: "cx:cy" -> array of {x, y, latlng}
+    // Map: "cx:cy" -> array of {x, y, latlng, feature}
+    state.hoverIndex = null;
     state.hoverIndexBounds = null;           // Optional bounds of the index
     state.geojsonHoverable = state.geojsonHoverable || {};
 
@@ -216,16 +271,20 @@ function setupHover(self, data, state) {
                         const d = Math.sqrt(dxp * dxp + dyp * dyp);
                         if (d < bestDist) {
                             bestDist = d;
-                            best = o.latlng;
+                            best = o;
                         }
                     }
                 }
             }
 
-            // Show/hide the hover marker depending on distance
+            // Show/hide the hover marker depending on distance and dispatch feature data
             if (best && bestDist <= state.hoverThresholdPx) {
-                state.hover.setLatLng(best);
+                state.hover.setLatLng(best.latlng);
                 if (!state.map.hasLayer(state.hover)) state.map.addLayer(state.hover);
+
+                // Fire a DOM event with the hovered feature's GeoJSON so other components can react
+                const detail = {feature: best.feature, latlng: best.latlng};
+                window.dispatchEvent(new CustomEvent('hover_layer', {detail}));
             } else {
                 if (state.map.hasLayer(state.hover)) state.map.removeLayer(state.hover);
             }
@@ -258,8 +317,8 @@ function setupHover(self, data, state) {
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
 
         for (const [nm, lyr] of Object.entries(state.geojsonLayers)) {
-            if (!state.geojsonHoverable[nm]) continue;        // only hoverable overlays
-            if (!state.map.hasLayer(lyr)) continue;           // only visible overlays
+            if (!state.geojsonHoverable[nm]) continue;
+            if (!state.map.hasLayer(lyr)) continue;
             try {
                 lyr.eachLayer(function (sub) {
                     if (sub && typeof sub.getLatLng === 'function') {
@@ -268,7 +327,8 @@ function setupHover(self, data, state) {
                         if (!isFinite(pt.x) || !isFinite(pt.y)) return;
                         const cell = state._cellKeyFromPoint(pt);
                         if (!idx.has(cell.key)) idx.set(cell.key, []);
-                        idx.get(cell.key).push({x: pt.x, y: pt.y, latlng: ll});
+                        const feat = sub.feature ? sub.feature : (sub.toGeoJSON ? sub.toGeoJSON() : null);
+                        idx.get(cell.key).push({x: pt.x, y: pt.y, latlng: ll, feature: feat});
                         if (pt.x < minX) minX = pt.x;
                         if (pt.x > maxX) maxX = pt.x;
                         if (pt.y < minY) minY = pt.y;

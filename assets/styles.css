@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap');
+
+/* Use a modern, readable typeface across Leaflet UI components */
+.leaflet-control,
+.leaflet-tooltip,
+.leaflet-measure-resultpopup {
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+.leaflet-control-measure,
+.leaflet-measure-resultpopup {
+  font-size: 13px;
+}
+
+/* Remove the default Leaflet tooltip arrow (pseudo-elements) and apply a gentler tooltip style */
+.leaflet-tooltip::before,
+.leaflet-tooltip::after,
+.leaflet-draw-tooltip::before,
+.leaflet-draw-tooltip::after,
+.drawn-tooltip::before,
+.drawn-tooltip::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* High-specificity overrides to ensure tooltip arrows are hidden even if vendor CSS loads after ours */
+.leaflet-container .leaflet-tooltip::before,
+.leaflet-container .leaflet-tooltip::after,
+.leaflet-container .leaflet-draw-tooltip::before,
+.leaflet-container .leaflet-draw-tooltip::after,
+.leaflet-container .drawn-tooltip::before,
+.leaflet-container .drawn-tooltip::after {
+  display: none !important;
+  content: none !important;
+  border: 0 !important;
+}
+
+/* Force gentle font/weight for drawn tooltips */
+.leaflet-container .drawn-tooltip,
+.leaflet-container .leaflet-draw-tooltip,
+.leaflet-container .leaflet-tooltip {
+  font-weight: 400 !important;
+  padding: 8px 12px !important;
+  border-radius: 12px !important;
+}
+
+/* Gentle tooltip (rounded pill, softer type) */
+.leaflet-tooltip,
+.leaflet-draw-tooltip,
+.drawn-tooltip {
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 400; /* gentler weight */
+  line-height: 1.25;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(20, 20, 20, 0.78) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 8px 20px rgba(2,6,23,0.08) !important;
+  border: none !important;
+  pointer-events: none; /* avoid capturing mouse events */
+  white-space: nowrap;
+}
+
+/* Slightly smaller text on very small screens */
+@media (max-width: 480px) {
+  .leaflet-tooltip,
+  .leaflet-draw-tooltip,
+  .drawn-tooltip {
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 10px;
+  }
+}
+
+/* Softer styling for Leaflet toolbar buttons */
+.leaflet-bar a {
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  color: #333;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.leaflet-bar a:hover {
+  background-color: #f7f7f7;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Highlight editing handles with a subtle teal theme */
+.leaflet-editing-icon {
+  width: 10px !important;
+  height: 10px !important;
+  margin-left: -5px !important;
+  margin-top: -5px !important;
+  border-radius: 50% !important;
+  background: #00bcd4 !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.25) !important;
+}
+
+.leaflet-editing-icon.leaflet-middle-marker-icon {
+  width: 8px !important;
+  height: 8px !important;
+  margin-left: -4px !important;
+  margin-top: -4px !important;
+  background: #80deea !important;
+  box-shadow: 0 0 0 2px rgba(128, 222, 234, 0.25) !important;
+}

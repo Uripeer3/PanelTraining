@@ -11,15 +11,23 @@ class LeafletCanvasScatter(ReactiveHTML):
     zoom = param.Integer(default=9, bounds=(1, 22))
     cmap = param.String(default="Viridis")
     show_hover = param.Boolean(default=False)
-    map_options = param.Dict(default={})  # Optional Leaflet L.map options (camelCase), merged with defaults in JS
+    map_options = param.Dict(
+        default={}
+    )  # Optional Leaflet L.map options (camelCase), merged with defaults in JS
 
     container_style = param.String(default="width:100%;height:100%;")
-    tile_layers = param.Dict(default={
-        "OSM": ("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                {"attribution": "&copy; OSM contributors"}),
-        "Topo": ("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-                 {"attribution": "&copy; OpenTopoMap contributors"})
-    })
+    tile_layers = param.Dict(
+        default={
+            "OSM": (
+                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {"attribution": "&copy; OSM contributors"},
+            ),
+            "Topo": (
+                "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+                {"attribution": "&copy; OpenTopoMap contributors"},
+            ),
+        }
+    )
 
     drawn_shapes = param.List(default=[])
 
@@ -64,8 +72,15 @@ class LeafletCanvasScatter(ReactiveHTML):
 
     # Server-side helpers to add scatter overlays by generating GeoJSON Points
     def add_scatter(
-            self, name: str, lats, lons, values=None, cmap=None, radius: int = 3, fill_opacity: float = 0.8,
-            hoverable=False
+        self,
+        name: str,
+        lats,
+        lons,
+        values=None,
+        cmap=None,
+        radius: int = 3,
+        fill_opacity: float = 0.8,
+        hoverable=False,
     ) -> None:
         """Add/update a colored scatter overlay as GeoJSON Points rendered client-side.
         Each point is a Feature with properties controlling styling:
@@ -92,37 +107,45 @@ class LeafletCanvasScatter(ReactiveHTML):
         # Put shared properties at the collection level to avoid repeating them per feature
         collection_props = {
             "radius": int(radius),
-            "fillOpacity": float(fill_opacity)  # Leaflet option key casing
+            "fillOpacity": float(fill_opacity),  # Leaflet option key casing
         }
         if values is not None:
-            collection_props.update({
-                "vmin": vmin,
-                "vmax": vmax,
-                "cmap": cmap_val
-            })
+            collection_props.update({"vmin": vmin, "vmax": vmax, "cmap": cmap_val})
         else:
-            collection_props.update({
-                "color": cmap_val
-            })
+            collection_props.update({"color": cmap_val})
 
         features = []
         if values is not None:
             for i in range(n):
                 # Only value is per-point; other styling lives at collection level
-                features.append({
-                    "type": "Feature",
-                    "geometry": {"type": "Point", "coordinates": [lons[i], lats[i]]},
-                    "properties": {"value": values[i]}
-                })
+                features.append(
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [lons[i], lats[i]],
+                        },
+                        "properties": {"value": values[i]},
+                    }
+                )
         else:
             for i in range(n):
-                features.append({
-                    "type": "Feature",
-                    "geometry": {"type": "Point", "coordinates": [lons[i], lats[i]]},
-                    "properties": {}
-                })
+                features.append(
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [lons[i], lats[i]],
+                        },
+                        "properties": {},
+                    }
+                )
 
-        geojson = {"type": "FeatureCollection", "features": features, "properties": collection_props}
+        geojson = {
+            "type": "FeatureCollection",
+            "features": features,
+            "properties": collection_props,
+        }
 
         self.add_layer(name, geojson, hoverable=hoverable)
 
@@ -173,7 +196,7 @@ class LeafletCanvasScatter(ReactiveHTML):
             """
 
     _scripts = {
-        'render': """
+        "render": """
             /*
              Plain-language guide to this JavaScript (for non-JS readers)
 
@@ -247,6 +270,7 @@ class LeafletCanvasScatter(ReactiveHTML):
             // 5) Drawing tools (polygons, circles, etc.)
             // We store user-drawn shapes in a FeatureGroup so they can be edited/removed as a set.
             state.drawnItems = new L.FeatureGroup().addTo(state.map);
+            state.geojsonControl.addOverlay(state.drawnItems, 'Drawn Shapes');
             state.drawControl = new L.Control.Draw({
                 position: 'topleft',
                 edit: { featureGroup: state.drawnItems },
@@ -409,6 +433,11 @@ class LeafletCanvasScatter(ReactiveHTML):
             };
             state.map.on('mousemove', state.onMouseMove);
 
+            // Hide hover marker when the cursor leaves the map area
+            state.map.on('mouseout', function () {
+                if (state.map.hasLayer(state.hover)) state.map.removeLayer(state.hover);
+            });
+
             /**
              * Convert a pixel point to a grid cell key used by the hover index.
              * @param {{x:number, y:number}} pt
@@ -455,8 +484,7 @@ class LeafletCanvasScatter(ReactiveHTML):
             state.map.on('zoomend', () => state._rebuildHoverIndex());
             state.map.on('moveend', () => state._rebuildHoverIndex());
         """,
-
-        'after_layout': """
+        "after_layout": """
             // This runs after Panel/Bokeh finishes placing and sizing the widget on the page.
             // Leaflet needs to be told when its container size might have changed:
             //   - invalidateSize() forces Leaflet to recompute the map's pixel size and re-render tiles/vectors.
@@ -471,8 +499,7 @@ class LeafletCanvasScatter(ReactiveHTML):
             // Ensure the hover marker visibility matches the current "show_hover" setting.
             self.show_hover();
         """,
-
-        'show_hover': """
+        "show_hover": """
             // Show/hide the reusable hover marker based on Python's "show_hover" flag.
             // When enabled, the actual placement is handled by the mousemove handler in 'render'.
             if (!data.show_hover) {
@@ -482,9 +509,8 @@ class LeafletCanvasScatter(ReactiveHTML):
             // If enabled, do nothing here; movement is handled by mouse events.
             return;
         """,
-
         # Shared sync that reads BOTH overlay params and updates the map/control
-        'sync_geojson': """
+        "sync_geojson": """
             // Synchronize overlay layers from Python to Leaflet.
             // Python provides two dicts: geojson_overlays (static) and geojson_hover_overlays (participate in hover).
             // We merge them, create/update/remove Leaflet layers accordingly, then refresh the hover index.
@@ -626,34 +652,32 @@ class LeafletCanvasScatter(ReactiveHTML):
             // Rebuild the hover grid index to reflect current visibility and geometry
             state._rebuildHoverIndex();
         """,
-
         # Trigger sync whenever either param changes
-        'geojson_overlays': "self.sync_geojson()",
-        'geojson_hover_overlays': "self.sync_geojson()",
-
+        "geojson_overlays": "self.sync_geojson()",
+        "geojson_hover_overlays": "self.sync_geojson()",
     }
-    _extension_name = 'leaflet'
+    _extension_name = "leaflet"
 
     __css__ = [
-        'https://unpkg.com/leaflet@1.7.1/dist/leaflet.css',
-        'https://unpkg.com/leaflet-draw/dist/leaflet.draw.css',
-        'https://unpkg.com/leaflet-measure/dist/leaflet-measure.css',
-        'https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css',
+        "https://unpkg.com/leaflet@1.7.1/dist/leaflet.css",
+        "https://unpkg.com/leaflet-draw/dist/leaflet.draw.css",
+        "https://unpkg.com/leaflet-measure/dist/leaflet-measure.css",
+        "https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css",
     ]
     __javascript__ = [
-        'https://unpkg.com/chroma-js@2.4.2/chroma.min.js',
+        "https://unpkg.com/chroma-js@2.4.2/chroma.min.js",
         # leaflet 1.7.1 is the last version to support Measure control properly
-        'https://unpkg.com/leaflet@1.7.1/dist/leaflet.js',
-        'https://unpkg.com/leaflet-draw/dist/leaflet.draw.js',
-        'https://unpkg.com/leaflet-measure/dist/leaflet-measure.js',
+        "https://unpkg.com/leaflet@1.7.1/dist/leaflet.js",
+        "https://unpkg.com/leaflet-draw/dist/leaflet.draw.js",
+        "https://unpkg.com/leaflet-measure/dist/leaflet-measure.js",
         "https://cdn.jsdelivr.net/npm/leaflet.path.drag@0.0.6/src/Path.Drag.min.js",
-        'https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js',
+        "https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js",
     ]
 
 
 import numpy as np
 
-pn.extension('leaflet')
+pn.extension("leaflet")
 
 # Generate large dataset
 n = 20000

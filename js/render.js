@@ -120,18 +120,20 @@ function setupDrawingTools(self, data, state) {
     });
     state.map.addControl(state.drawControl);
 
-    function recomputeDrawnShapes(openLayer = null) {
+    function recomputeDrawnShapes() {
         const features = [];
         state.drawnItems.eachLayer(function (layer) {
             const feat = annotateMeasurements(layer);
             const text = featureText(feat);
             const tt = layer.getTooltip && layer.getTooltip();
-            if (tt) tt.setContent(text);
-            else layer.bindTooltip(text, {permanent: true, className: 'drawn-tooltip'});
+            if (tt) {
+                tt.setContent(text);
+            } else {
+                layer.bindTooltip(text, {className: 'drawn-tooltip'});
+            }
             features.push(feat);
         });
         data.drawn_shapes = features;
-        if (openLayer) openLayer.openTooltip();
     }
     state.map.on('draw:editstart', function () {
         state.centroidHandles = [];
@@ -206,7 +208,7 @@ function setupDrawingTools(self, data, state) {
     // Sync draw events back to Python: convert to GeoJSON on every change
     state.map.on(L.Draw.Event.CREATED, function (e) {
         state.drawnItems.addLayer(e.layer);
-        recomputeDrawnShapes(e.layer);
+        recomputeDrawnShapes();
     });
     state.map.on('draw:deleted', function () {
         recomputeDrawnShapes();

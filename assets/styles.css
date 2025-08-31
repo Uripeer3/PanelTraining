@@ -12,17 +12,65 @@
   font-size: 13px;
 }
 
-/* Polished tooltips used by Leaflet draw and our drawn features */
+/* Remove the default Leaflet tooltip arrow (pseudo-elements) and apply a gentler tooltip style */
+.leaflet-tooltip::before,
+.leaflet-tooltip::after,
+.leaflet-draw-tooltip::before,
+.leaflet-draw-tooltip::after,
+.drawn-tooltip::before,
+.drawn-tooltip::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* High-specificity overrides to ensure tooltip arrows are hidden even if vendor CSS loads after ours */
+.leaflet-container .leaflet-tooltip::before,
+.leaflet-container .leaflet-tooltip::after,
+.leaflet-container .leaflet-draw-tooltip::before,
+.leaflet-container .leaflet-draw-tooltip::after,
+.leaflet-container .drawn-tooltip::before,
+.leaflet-container .drawn-tooltip::after {
+  display: none !important;
+  content: none !important;
+  border: 0 !important;
+}
+
+/* Force gentle font/weight for drawn tooltips */
+.leaflet-container .drawn-tooltip,
+.leaflet-container .leaflet-draw-tooltip,
+.leaflet-container .leaflet-tooltip {
+  font-weight: 400 !important;
+  padding: 8px 12px !important;
+  border-radius: 12px !important;
+}
+
+/* Gentle tooltip (rounded pill, softer type) */
+.leaflet-tooltip,
 .leaflet-draw-tooltip,
 .drawn-tooltip {
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
   font-size: 13px;
-  font-weight: 500;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: rgba(30, 30, 30, 0.85);
-  color: #fff;
-  border: none;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  font-weight: 400; /* gentler weight */
+  line-height: 1.25;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(20, 20, 20, 0.78) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 8px 20px rgba(2,6,23,0.08) !important;
+  border: none !important;
+  pointer-events: none; /* avoid capturing mouse events */
+  white-space: nowrap;
+}
+
+/* Slightly smaller text on very small screens */
+@media (max-width: 480px) {
+  .leaflet-tooltip,
+  .leaflet-draw-tooltip,
+  .drawn-tooltip {
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 10px;
+  }
 }
 
 /* Softer styling for Leaflet toolbar buttons */

@@ -2,6 +2,12 @@
   font-family: "Segoe UI", Arial, sans-serif;
 }
 
+.leaflet-control-measure,
+.leaflet-measure-resultpopup {
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 13px;
+}
+
 .leaflet-draw-tooltip,
 .drawn-tooltip {
   font-family: "Segoe UI", Arial, sans-serif;

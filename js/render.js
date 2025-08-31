@@ -64,12 +64,41 @@ function configureOverlays(self, data, state) {
 // Format GeoJSON feature properties into a readable string for tooltips on drawn items.
 function featureText(feature) {
     if (feature && feature.properties) {
+        if (feature.properties.tooltip) return feature.properties.tooltip;
         if (feature.properties.name) return feature.properties.name;
         return Object.entries(feature.properties)
             .map(([k, v]) => `${k}: ${v}`)
             .join(', ');
     }
     return '';
+}
+
+// Compute area/radius measurements for supported layers and attach a tooltip string.
+function annotateMeasurements(layer) {
+    const feature = layer.toGeoJSON();
+    feature.properties = feature.properties || {};
+
+    if (layer instanceof L.Polygon) {
+        try {
+            const latlngs = layer.getLatLngs()[0];
+            const area = Math.abs(L.GeometryUtil.geodesicArea(latlngs));
+            const readable = area >= 1e6 ? (area / 1e6).toFixed(2) + ' km²'
+                                       : area.toFixed(2) + ' m²';
+            feature.properties.area = area;
+            feature.properties.tooltip = `Area: ${readable}`;
+        } catch (e) {
+            /* noop */
+        }
+    } else if (layer instanceof L.Circle) {
+        const r = layer.getRadius();
+        const area = Math.PI * r * r;
+        const readableR = r >= 1000 ? (r / 1000).toFixed(2) + ' km'
+                                    : r.toFixed(2) + ' m';
+        feature.properties.radius = r;
+        feature.properties.area = area;
+        feature.properties.tooltip = `Radius: ${readableR}`;
+    }
+    return feature;
 }
 
 
@@ -90,6 +119,20 @@ function setupDrawingTools(self, data, state) {
         }
     });
     state.map.addControl(state.drawControl);
+
+    function recomputeDrawnShapes(openLayer = null) {
+        const features = [];
+        state.drawnItems.eachLayer(function (layer) {
+            const feat = annotateMeasurements(layer);
+            const text = featureText(feat);
+            const tt = layer.getTooltip && layer.getTooltip();
+            if (tt) tt.setContent(text);
+            else layer.bindTooltip(text, {permanent: true, className: 'drawn-tooltip'});
+            features.push(feat);
+        });
+        data.drawn_shapes = features;
+        if (openLayer) openLayer.openTooltip();
+    }
     state.map.on('draw:editstart', function () {
         state.centroidHandles = [];
 
@@ -140,8 +183,7 @@ function setupDrawingTools(self, data, state) {
                 });
 
                 handle.on('dragend', function () {
-                    data.drawn_shapes = state.drawnItems.toGeoJSON().features;
-
+                    recomputeDrawnShapes();
                     // Recompute centroid and reset handle there
                     centroid = layer.getCenter();
                     handle.setLatLng(centroid);
@@ -163,21 +205,14 @@ function setupDrawingTools(self, data, state) {
 
     // Sync draw events back to Python: convert to GeoJSON on every change
     state.map.on(L.Draw.Event.CREATED, function (e) {
-        // Add the new shape to the edit group and append its GeoJSON to Python's list
         state.drawnItems.addLayer(e.layer);
-        const feature = e.layer.toGeoJSON();
-        e.layer
-            .bindTooltip(featureText(feature), {permanent: true, className: 'drawn-tooltip'})
-            .openTooltip();
-        data.drawn_shapes = [...data.drawn_shapes, feature];
+        recomputeDrawnShapes(e.layer);
     });
-    state.map.on('draw:deleted', function (e) {
-        // Replace Python-side list with the remaining shapes
-        data.drawn_shapes = state.drawnItems.toGeoJSON().features;
+    state.map.on('draw:deleted', function () {
+        recomputeDrawnShapes();
     });
-    state.map.on('draw:edited', function (e) {
-        // Replace Python-side list with the updated shapes
-        data.drawn_shapes = state.drawnItems.toGeoJSON().features;
+    state.map.on('draw:edited', function () {
+        recomputeDrawnShapes();
     });
 
 }

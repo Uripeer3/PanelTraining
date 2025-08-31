@@ -61,6 +61,17 @@ function configureOverlays(self, data, state) {
 
 }
 
+// Format GeoJSON feature properties into a readable string for tooltips on drawn items.
+function featureText(feature) {
+    if (feature && feature.properties) {
+        if (feature.properties.name) return feature.properties.name;
+        return Object.entries(feature.properties)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(', ');
+    }
+    return '';
+}
+
 
 function setupDrawingTools(self, data, state) {
     // We store user-drawn shapes in a FeatureGroup so they can be edited/removed as a set.
@@ -154,7 +165,11 @@ function setupDrawingTools(self, data, state) {
     state.map.on(L.Draw.Event.CREATED, function (e) {
         // Add the new shape to the edit group and append its GeoJSON to Python's list
         state.drawnItems.addLayer(e.layer);
-        data.drawn_shapes = [...data.drawn_shapes, e.layer.toGeoJSON()];
+        const feature = e.layer.toGeoJSON();
+        e.layer
+            .bindTooltip(featureText(feature), {permanent: true, className: 'drawn-tooltip'})
+            .openTooltip();
+        data.drawn_shapes = [...data.drawn_shapes, feature];
     });
     state.map.on('draw:deleted', function (e) {
         // Replace Python-side list with the remaining shapes
@@ -172,7 +187,7 @@ function setupHover(self, data, state) {
     state.hover = L.circleMarker(
         [0, 0],
         {radius: 8, color: 'red', opacity: 0.9, interactive: false, renderer: state.canvasRenderer}
-    ).bindTooltip('', {className: 'hover-tooltip', direction: 'top', offset: [0, -8], opacity: 0.9});
+    );
 
     // Hover configuration/index
     state.hoverThresholdPx = 25;             // max pixel distance to snap
@@ -184,16 +199,6 @@ function setupHover(self, data, state) {
     // requestAnimationFrame throttle for mousemove (avoids excessive work)
     state._mmPending = false;
     state._mmLast = null;
-
-    function featureText(feature) {
-        if (feature && feature.properties) {
-            if (feature.properties.name) return feature.properties.name;
-            return Object.entries(feature.properties)
-                .map(([k, v]) => `${k}: ${v}`)
-                .join(', ');
-        }
-        return '';
-    }
 
     /**
      * Mouse-move handler that snaps the hover marker to the nearest point (if close enough).
@@ -236,9 +241,7 @@ function setupHover(self, data, state) {
             // Show/hide the hover marker depending on distance
             if (best && bestDist <= state.hoverThresholdPx) {
                 state.hover.setLatLng(best.latlng);
-                state.hover.setTooltipContent(featureText(best.feature));
                 if (!state.map.hasLayer(state.hover)) state.map.addLayer(state.hover);
-                state.hover.openTooltip();
                 const detail = {layer_data: best.feature};
                 // Dispatch a DOM event for client-side listeners with the hovered feature.
                 // The event bubbles so external components can listen on document or window.
@@ -247,7 +250,6 @@ function setupHover(self, data, state) {
                 );
             } else {
                 if (state.map.hasLayer(state.hover)) state.map.removeLayer(state.hover);
-                state.hover.closeTooltip();
             }
         });
     };
@@ -256,7 +258,6 @@ function setupHover(self, data, state) {
     // Hide hover marker when the cursor leaves the map area
     state.map.on('mouseout', function () {
         if (state.map.hasLayer(state.hover)) state.map.removeLayer(state.hover);
-        state.hover.closeTooltip();
     });
 
     /**

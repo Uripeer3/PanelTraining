@@ -3,22 +3,12 @@
 }
 
 .leaflet-draw-tooltip,
-.hover-tooltip {
+.drawn-tooltip {
   font-family: "Segoe UI", Arial, sans-serif;
   font-size: 13px;
   font-weight: 500;
   padding: 4px 8px;
   border-radius: 6px;
-}
-
-.hover-tooltip {
-  color: #333;
-  background: #fff;
-  border: 1px solid #777;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-}
-
-.leaflet-draw-tooltip {
   background: rgba(0,0,0,0.75);
   color: #fff;
   border: none;

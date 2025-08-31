@@ -82,8 +82,9 @@ function annotateMeasurements(layer) {
         try {
             const latlngs = layer.getLatLngs()[0];
             const area = Math.abs(L.GeometryUtil.geodesicArea(latlngs));
-            const readable = area >= 1e6 ? (area / 1e6).toFixed(2) + ' km²'
-                                       : area.toFixed(2) + ' m²';
+            const readable = area >= 1e6
+                ? `${(area / 1e6).toLocaleString(undefined, {maximumFractionDigits: 2})} km<sup>2</sup>`
+                : `${area.toLocaleString(undefined, {maximumFractionDigits: 2})} m<sup>2</sup>`;
             feature.properties.area = area;
             feature.properties.tooltip = `Area: ${readable}`;
         } catch (e) {
@@ -92,8 +93,9 @@ function annotateMeasurements(layer) {
     } else if (layer instanceof L.Circle) {
         const r = layer.getRadius();
         const area = Math.PI * r * r;
-        const readableR = r >= 1000 ? (r / 1000).toFixed(2) + ' km'
-                                    : r.toFixed(2) + ' m';
+        const readableR = r >= 1000
+            ? `${(r / 1000).toLocaleString(undefined, {maximumFractionDigits: 2})} km`
+            : `${r.toLocaleString(undefined, {maximumFractionDigits: 2})} m`;
         feature.properties.radius = r;
         feature.properties.area = area;
         feature.properties.tooltip = `Radius: ${readableR}`;
@@ -223,7 +225,16 @@ function setupHover(self, data, state) {
     // A reusable "hover" circle marker: hidden until the mouse is close to a hoverable point.
     state.hover = L.circleMarker(
         [0, 0],
-        {radius: 8, color: 'red', opacity: 0.9, interactive: false, renderer: state.canvasRenderer}
+        {
+            radius: 6,
+            color: '#2196f3',
+            weight: 2,
+            fillColor: '#ffffff',
+            fillOpacity: 1.0,
+            opacity: 1.0,
+            interactive: false,
+            renderer: state.canvasRenderer,
+        }
     );
 
     // Hover configuration/index

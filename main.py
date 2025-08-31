@@ -260,6 +260,76 @@ class LeafletCanvasScatter(ReactiveHTML):
                 }
             });
             state.map.addControl(state.drawControl);
+            state.map.on('draw:editstart', function () {
+                state.centroidHandles = [];
+            
+                state.drawnItems.eachLayer(function (layer) {
+                    if (layer instanceof L.Polygon) {
+            
+                        let centroid = layer.getCenter();
+            
+                        // Create draggable marker at centroid
+                        const handle = L.marker(centroid, {
+                            draggable: true,
+                            icon: L.divIcon({
+                                className: 'polygon-drag-handle',
+                                html: '<div style="width:12px;height:12px;background:#ff4081;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.5)"></div>',
+                                iconSize: [12,12]
+                            })
+                        }).addTo(state.map);
+                        state.centroidHandles.push(handle);
+                        // Keep centroid handle updated when vertices move
+                        layer.on('edit', function () {
+                          if (handle) {
+                            const c = layer.getCenter();
+                            handle.setLatLng(c);
+                          }
+                        });
+                        
+                        handle.on('drag', function (ev) {
+                            const newC = ev.latlng;
+                            const oldC = centroid;
+                            const dLat = newC.lat - oldC.lat;
+                            const dLng = newC.lng - oldC.lng;
+                        
+                            // In-place shift of existing vertices
+                            const latlngs = layer.getLatLngs()[0];
+                            for (let i = 0; i < latlngs.length; i++) {
+                                latlngs[i].lat += dLat;
+                                latlngs[i].lng += dLng;
+                            }
+                            layer.redraw();
+                        
+                            // Now resync editing markers
+                            if (layer.editing) {
+                                layer.editing.updateMarkers();
+                            }
+                        
+                            // Update centroid ref
+                            centroid = layer.getCenter();
+                        });
+                        
+                        handle.on('dragend', function () {
+                            data.drawn_shapes = state.drawnItems.toGeoJSON().features;
+                        
+                            // Recompute centroid and reset handle there
+                            centroid = layer.getCenter();
+                            handle.setLatLng(centroid);
+                        });
+                    }
+                });
+            });
+            
+            // Remove centroid handles when leaving edit mode
+            state.map.on('draw:editstop', function () {
+                if (state.centroidHandles) {
+                    for (const h of state.centroidHandles) {
+                        state.map.removeLayer(h);
+                    }
+                    state.centroidHandles = [];
+                }
+            });
+
 
             // Sync draw events back to Python: convert to GeoJSON on every change
             state.map.on(L.Draw.Event.CREATED, function (e) {
@@ -576,6 +646,7 @@ class LeafletCanvasScatter(ReactiveHTML):
         'https://unpkg.com/leaflet@1.7.1/dist/leaflet.js',
         'https://unpkg.com/leaflet-draw/dist/leaflet.draw.js',
         'https://unpkg.com/leaflet-measure/dist/leaflet-measure.js',
+        "https://cdn.jsdelivr.net/npm/leaflet.path.drag@0.0.6/src/Path.Drag.min.js",
         'https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js',
     ]
 

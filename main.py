@@ -683,7 +683,6 @@ pn.extension("leaflet")
 n = 20000
 lat = 37.3 + 0.1 * np.sin(np.linspace(0, 50 * np.pi, n))
 lon = -122.0 + 0.1 * np.cos(np.linspace(0, 50 * np.pi, n))
-values = np.random.rand(n) * 100
 
 leaf = LeafletCanvasScatter(
     cmap="Inferno",
@@ -696,8 +695,8 @@ leaf.add_scatter(
     name="Example Scatter",
     lats=list(map(float, lat)),
     lons=list(map(float, lon)),
-    values=list(map(float, values)),
-    cmap="Inferno",
+    values=list(map(float, np.linspace(-3, 10e10, n))),
+    cmap="Jet",
     radius=3,
     fill_opacity=0.8,
     hoverable=True,
@@ -707,8 +706,7 @@ leaf.add_scatter(
     name="Example Scatter 2",
     lats=list(map(float, lat + 0.1)),
     lons=list(map(float, lon + 0.1)),
-    values=list(map(float, values)),
-    cmap="Inferno",
+    cmap="blue",
     radius=3,
     fill_opacity=0.8,
     hoverable=True,
@@ -718,7 +716,7 @@ leaf.add_scatter(
     name="Example Scatter 3 - no hover",
     lats=list(map(float, lat + 0.2)),
     lons=list(map(float, lon + 0.2)),
-    values=list(map(float, values)),
+    values=list(map(float, np.random.rand(n) * 100)),
     cmap="Inferno",
     radius=3,
     fill_opacity=0.8,

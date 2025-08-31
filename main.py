@@ -128,46 +128,6 @@ class LeafletCanvasScatter(ReactiveHTML):
 
     _template = """
                 <div id="container" style="${container_style}; overflow:hidden; position:relative;">
-                  <style>
-                    /* Nicer draw vertices: circular, compact, with accent color */
-                    .leaflet-editing-icon {
-                      width: 10px !important;
-                      height: 10px !important;
-                      margin-left: -5px !important; /* center the handle */
-                      margin-top: -5px !important;
-                      border-radius: 50% !important;
-                      background: #00bcd4 !important;
-                      border: 2px solid #ffffff !important;
-                      box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.25) !important;
-                    }
-                    /* Midpoint handles slightly smaller and lighter */
-                    .leaflet-editing-icon.leaflet-middle-marker-icon {
-                      width: 8px !important;
-                      height: 8px !important;
-                      margin-left: -4px !important;
-                      margin-top: -4px !important;
-                      background: #80deea !important;
-                      box-shadow: 0 0 0 2px rgba(128, 222, 234, 0.25) !important;
-                    }
-                    /* Refine draw toolbar buttons */
-                    .leaflet-draw-toolbar .leaflet-bar a {
-                      border-radius: 6px !important;
-                      border-color: #e0e0e0 !important;
-                      background-color: rgba(255, 255, 255, 0.95) !important;
-                    }
-                    .leaflet-draw-toolbar .leaflet-bar a:hover {
-                      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
-                    }
-                    /* Softer draw tooltip */
-                    .leaflet-draw-tooltip {
-                      border-radius: 6px !important;
-                      background: rgba(0, 0, 0, 0.75) !important;
-                      color: #fff !important;
-                      padding: 4px 8px !important;
-                      border: none !important;
-                      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
-                    }
-                  </style>
                   <div id="map" style="width:100%; height:100%;"></div>
                 </div>
             """
@@ -244,36 +204,40 @@ class LeafletCanvasScatter(ReactiveHTML):
             });
             state.map.addControl(state.measure);
 
-            // 5) Drawing tools (polygons, circles, etc.)
-            // We store user-drawn shapes in a FeatureGroup so they can be edited/removed as a set.
+            // 5) Drawing & editing with Leaflet-Geoman
             state.drawnItems = new L.FeatureGroup().addTo(state.map);
-            state.drawControl = new L.Control.Draw({
+            state.map.pm.addControls({
                 position: 'topleft',
-                edit: { featureGroup: state.drawnItems },
-                draw: {
-                    polygon: true,
-                    polyline: false,
-                    rectangle: false,
-                    circle: true,
-                    marker: false,
-                    circlemarker: false
-                }
+                drawPolygon: true,
+                drawPolyline: false,
+                drawRectangle: false,
+                drawCircle: true,
+                drawMarker: false,
+                drawCircleMarker: false,
+                editMode: true,
+                dragMode: true,
+                cutPolygon: false,
+                removalMode: true
             });
-            state.map.addControl(state.drawControl);
 
-            // Sync draw events back to Python: convert to GeoJSON on every change
-            state.map.on(L.Draw.Event.CREATED, function (e) {
-                // Add the new shape to the edit group and append its GeoJSON to Python's list
-                state.drawnItems.addLayer(e.layer);
-                data.drawn_shapes = [...data.drawn_shapes, e.layer.toGeoJSON()];
-            });
-            state.map.on('draw:deleted', function (e) {
-                // Replace Python-side list with the remaining shapes
+            const updateDrawn = () => {
                 data.drawn_shapes = state.drawnItems.toGeoJSON().features;
+            };
+
+            const trackLayer = (layer) => {
+                state.drawnItems.addLayer(layer);
+                layer.on('pm:edit', updateDrawn);
+                layer.on('pm:dragend', updateDrawn);
+                layer.on('pm:remove', () => { state.drawnItems.removeLayer(layer); updateDrawn(); });
+            };
+
+            state.map.on('pm:create', e => {
+                trackLayer(e.layer);
+                updateDrawn();
             });
-            state.map.on('draw:edited', function (e) {
-                // Replace Python-side list with the updated shapes
-                data.drawn_shapes = state.drawnItems.toGeoJSON().features;
+            state.map.on('pm:remove', e => {
+                state.drawnItems.removeLayer(e.layer);
+                updateDrawn();
             });
 
             // 6) Hover marker + nearest-point snapping across overlays
@@ -566,14 +530,14 @@ class LeafletCanvasScatter(ReactiveHTML):
 
     __css__ = [
         'https://unpkg.com/leaflet@1.7.1/dist/leaflet.css',
-        'https://unpkg.com/leaflet-draw/dist/leaflet.draw.css',
+        'https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css',
         'https://unpkg.com/leaflet-measure/dist/leaflet-measure.css',
         'https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css',
     ]
     __javascript__ = [
         'https://unpkg.com/leaflet@1.7.1/dist/leaflet.js',
         'https://unpkg.com/chroma-js@2.4.2/chroma.min.js',
-        'https://unpkg.com/leaflet-draw/dist/leaflet.draw.js',
+        'https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js',
         'https://unpkg.com/leaflet-measure/dist/leaflet-measure.js',
         'https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js',
         # Canvas-Scatter plugin

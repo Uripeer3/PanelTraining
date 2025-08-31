@@ -226,7 +226,6 @@ class LeafletCanvasScatter(ReactiveHTML):
         "https://unpkg.com/leaflet@1.7.1/dist/leaflet.js",
         "https://unpkg.com/leaflet-draw/dist/leaflet.draw.js",
         "https://unpkg.com/leaflet-measure/dist/leaflet-measure.js",
-        "https://cdn.jsdelivr.net/npm/leaflet.path.drag@0.0.6/src/Path.Drag.min.js",
         "https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js",
     ]
 

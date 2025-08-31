@@ -1,3 +1,32 @@
+function injectStyles() {
+    if (document.getElementById('custom-leaflet-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'custom-leaflet-styles';
+    style.textContent = `
+    .leaflet-control { font-family: "Segoe UI", Arial, sans-serif; }
+    .leaflet-draw-tooltip, .hover-tooltip {
+        font-family: "Segoe UI", Arial, sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        color: #333;
+        background: #fff;
+        border: 1px solid #777;
+        border-radius: 4px;
+        padding: 4px 8px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .leaflet-draw-toolbar a {
+        background-color: #fff;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    .leaflet-draw-toolbar a:hover {
+        background-color: #f0f0f0;
+    }
+    `;
+    document.head.appendChild(style);
+}
+
 function initializeMap(self, data, state) {
     // preferCanvas = faster vector rendering; we default to no native zoomControl but allow override via data.map_options
     const defaultMapOpts = {preferCanvas: true, zoomControl: false};
@@ -172,7 +201,7 @@ function setupHover(self, data, state) {
     state.hover = L.circleMarker(
         [0, 0],
         {radius: 8, color: 'red', opacity: 0.9, interactive: false, renderer: state.canvasRenderer}
-    );
+    ).bindTooltip('', {className: 'hover-tooltip', direction: 'top', offset: [0, -8], opacity: 0.9});
 
     // Hover configuration/index
     state.hoverThresholdPx = 25;             // max pixel distance to snap
@@ -184,6 +213,16 @@ function setupHover(self, data, state) {
     // requestAnimationFrame throttle for mousemove (avoids excessive work)
     state._mmPending = false;
     state._mmLast = null;
+
+    function featureText(feature) {
+        if (feature && feature.properties) {
+            if (feature.properties.name) return feature.properties.name;
+            return Object.entries(feature.properties)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(', ');
+        }
+        return '';
+    }
 
     /**
      * Mouse-move handler that snaps the hover marker to the nearest point (if close enough).
@@ -226,7 +265,9 @@ function setupHover(self, data, state) {
             // Show/hide the hover marker depending on distance
             if (best && bestDist <= state.hoverThresholdPx) {
                 state.hover.setLatLng(best.latlng);
+                state.hover.setTooltipContent(featureText(best.feature));
                 if (!state.map.hasLayer(state.hover)) state.map.addLayer(state.hover);
+                state.hover.openTooltip();
                 const detail = {layer_data: best.feature};
                 // Dispatch a DOM event for client-side listeners with the hovered feature.
                 // The event bubbles so external components can listen on document or window.
@@ -235,6 +276,7 @@ function setupHover(self, data, state) {
                 );
             } else {
                 if (state.map.hasLayer(state.hover)) state.map.removeLayer(state.hover);
+                state.hover.closeTooltip();
             }
         });
     };
@@ -243,6 +285,7 @@ function setupHover(self, data, state) {
     // Hide hover marker when the cursor leaves the map area
     state.map.on('mouseout', function () {
         if (state.map.hasLayer(state.hover)) state.map.removeLayer(state.hover);
+        state.hover.closeTooltip();
     });
 
     /**
@@ -300,6 +343,7 @@ function setupHover(self, data, state) {
 }
 
 function render(self, data, state) {
+    injectStyles();
     initializeMap(self, data, state);
     addBaseLayers(self, data, state);
     configureOverlays(self, data, state);

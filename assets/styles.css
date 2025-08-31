@@ -1,0 +1,57 @@
+.leaflet-control {
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+.leaflet-draw-tooltip,
+.hover-tooltip {
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.hover-tooltip {
+  color: #333;
+  background: #fff;
+  border: 1px solid #777;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.leaflet-draw-tooltip {
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.leaflet-draw-toolbar a {
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.leaflet-draw-toolbar a:hover {
+  background-color: #f0f0f0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.leaflet-editing-icon {
+  width: 10px !important;
+  height: 10px !important;
+  margin-left: -5px !important;
+  margin-top: -5px !important;
+  border-radius: 50% !important;
+  background: #00bcd4 !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.25) !important;
+}
+
+.leaflet-editing-icon.leaflet-middle-marker-icon {
+  width: 8px !important;
+  height: 8px !important;
+  margin-left: -4px !important;
+  margin-top: -4px !important;
+  background: #80deea !important;
+  box-shadow: 0 0 0 2px rgba(128, 222, 234, 0.25) !important;
+}

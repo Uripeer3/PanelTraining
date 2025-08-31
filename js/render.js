@@ -1,32 +1,3 @@
-function injectStyles() {
-    if (document.getElementById('custom-leaflet-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'custom-leaflet-styles';
-    style.textContent = `
-    .leaflet-control { font-family: "Segoe UI", Arial, sans-serif; }
-    .leaflet-draw-tooltip, .hover-tooltip {
-        font-family: "Segoe UI", Arial, sans-serif;
-        font-size: 13px;
-        font-weight: 500;
-        color: #333;
-        background: #fff;
-        border: 1px solid #777;
-        border-radius: 4px;
-        padding: 4px 8px;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-    }
-    .leaflet-draw-toolbar a {
-        background-color: #fff;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-    }
-    .leaflet-draw-toolbar a:hover {
-        background-color: #f0f0f0;
-    }
-    `;
-    document.head.appendChild(style);
-}
-
 function initializeMap(self, data, state) {
     // preferCanvas = faster vector rendering; we default to no native zoomControl but allow override via data.map_options
     const defaultMapOpts = {preferCanvas: true, zoomControl: false};
@@ -343,7 +314,6 @@ function setupHover(self, data, state) {
 }
 
 function render(self, data, state) {
-    injectStyles();
     initializeMap(self, data, state);
     addBaseLayers(self, data, state);
     configureOverlays(self, data, state);

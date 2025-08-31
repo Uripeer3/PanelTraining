@@ -10,6 +10,10 @@ AFTER_LAYOUT_JS = (JS_DIR / "after_layout.js").read_text()
 SHOW_HOVER_JS = (JS_DIR / "show_hover.js").read_text()
 SYNC_GEOJSON_JS = (JS_DIR / "sync_geojson.js").read_text()
 
+ASSET_DIR = Path(__file__).parent / "assets"
+TEMPLATE_HTML = (ASSET_DIR / "template.html").read_text()
+CUSTOM_CSS = (ASSET_DIR / "styles.css").read_text()
+
 
 class AdvancedLeafletCanvas(ReactiveHTML):
     """Leaflet map with chroma.js colormap + Canvas-Scatter for high-performance scatter, with draw + measure + fullscreen."""
@@ -157,51 +161,7 @@ class AdvancedLeafletCanvas(ReactiveHTML):
 
         self.add_layer(name, geojson, hoverable=hoverable)
 
-    _template = """
-                <div id="container" style="${container_style}; overflow:hidden; position:relative;">
-                  <style>
-                    /* Nicer draw vertices: circular, compact, with accent color */
-                    .leaflet-editing-icon {
-                      width: 10px !important;
-                      height: 10px !important;
-                      margin-left: -5px !important; /* center the handle */
-                      margin-top: -5px !important;
-                      border-radius: 50% !important;
-                      background: #00bcd4 !important;
-                      border: 2px solid #ffffff !important;
-                      box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.25) !important;
-                    }
-                    /* Midpoint handles slightly smaller and lighter */
-                    .leaflet-editing-icon.leaflet-middle-marker-icon {
-                      width: 8px !important;
-                      height: 8px !important;
-                      margin-left: -4px !important;
-                      margin-top: -4px !important;
-                      background: #80deea !important;
-                      box-shadow: 0 0 0 2px rgba(128, 222, 234, 0.25) !important;
-                    }
-                    /* Refine draw toolbar buttons */
-                    .leaflet-draw-toolbar .leaflet-bar a {
-                      border-radius: 6px !important;
-                      border-color: #e0e0e0 !important;
-                      background-color: rgba(255, 255, 255, 0.95) !important;
-                    }
-                    .leaflet-draw-toolbar .leaflet-bar a:hover {
-                      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
-                    }
-                    /* Softer draw tooltip */
-                    .leaflet-draw-tooltip {
-                      border-radius: 6px !important;
-                      background: rgba(0, 0, 0, 0.75) !important;
-                      color: #fff !important;
-                      padding: 4px 8px !important;
-                      border: none !important;
-                      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
-                    }
-                  </style>
-                  <div id="map" style="width:100%; height:100%;"></div>
-                </div>
-            """
+    _template = TEMPLATE_HTML
 
     _scripts = {
         "render": RENDER_JS,
@@ -232,7 +192,7 @@ class AdvancedLeafletCanvas(ReactiveHTML):
 
 import numpy as np
 
-pn.extension("leaflet")
+pn.extension("leaflet", raw_css=[CUSTOM_CSS])
 
 
 def create_example_app(n: int = 20000) -> pn.Row:

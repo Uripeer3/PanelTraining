@@ -225,16 +225,7 @@ function setupHover(self, data, state) {
     // A reusable "hover" circle marker: hidden until the mouse is close to a hoverable point.
     state.hover = L.circleMarker(
         [0, 0],
-        {
-            radius: 6,
-            color: '#2196f3',
-            weight: 2,
-            fillColor: '#ffffff',
-            fillOpacity: 1.0,
-            opacity: 1.0,
-            interactive: false,
-            renderer: state.canvasRenderer,
-        }
+        {radius: 8, color: 'red', opacity: 0.9, interactive: false, renderer: state.canvasRenderer}
     );
 
     // Hover configuration/index
@@ -264,23 +255,22 @@ function setupHover(self, data, state) {
             if (!e) return;
 
             // Convert mouse lat/lon to pixel coordinates relative to the map container
-            const p = state.map.latLngToContainerPoint(e.latlng); // {x, y} in pixels
-            const cell = state._cellKeyFromPoint(p);              // grid cell containing pointer
-            let best = null, bestDist = Infinity;                 // nearest candidate and distance
+            const p = state.map.latLngToContainerPoint(e.latlng);
+            const cell = state._cellKeyFromPoint(p);
+            let best = null, bestDist = Infinity;
 
             // Search the 3x3 neighborhood around the pointer's grid cell for the nearest point
             for (let dy = -1; dy <= 1; dy++) {
                 for (let dx = -1; dx <= 1; dx++) {
-                    const k = (cell.cx + dx) + ':' + (cell.cy + dy);  // neighboring cell key
-                    const arr = state.hoverIndex.get(k);              // candidate points in cell
+                    const k = (cell.cx + dx) + ':' + (cell.cy + dy);
+                    const arr = state.hoverIndex.get(k);
                     if (!arr) continue;
-                    for (const o of arr) {                           // o = {x,y,latlng,feature}
-                        const dxp = p.x - o.x;                       // pixel delta X
-                        const dyp = p.y - o.y;                       // pixel delta Y
-                        const d = Math.sqrt(dxp * dxp + dyp * dyp);   // Euclidean distance
+                    for (const o of arr) {
+                        const dxp = p.x - o.x, dyp = p.y - o.y;
+                        const d = Math.sqrt(dxp * dxp + dyp * dyp);
                         if (d < bestDist) {
                             bestDist = d;
-                            best = o;
+                            best = o.latlng;
                         }
                     }
                 }
@@ -288,14 +278,8 @@ function setupHover(self, data, state) {
 
             // Show/hide the hover marker depending on distance
             if (best && bestDist <= state.hoverThresholdPx) {
-                state.hover.setLatLng(best.latlng);
+                state.hover.setLatLng(best);
                 if (!state.map.hasLayer(state.hover)) state.map.addLayer(state.hover);
-                const detail = {layer_data: best.feature};
-                // Dispatch a DOM event for client-side listeners with the hovered feature.
-                // The event bubbles so external components can listen on document or window.
-                state.map.getContainer().dispatchEvent(
-                    new CustomEvent('hover_layer', {detail, bubbles: true})
-                );
             } else {
                 if (state.map.hasLayer(state.hover)) state.map.removeLayer(state.hover);
             }
@@ -314,10 +298,9 @@ function setupHover(self, data, state) {
      * @returns {{cx:number, cy:number, key:string}}
      */
     state._cellKeyFromPoint = function (pt) {
-        // Convert pixel coords to integer grid cell indices
-        const cx = Math.floor(pt.x / state.gridCell); // column index
-        const cy = Math.floor(pt.y / state.gridCell); // row index
-        return {cx, cy, key: cx + ':' + cy};          // compound key "cx:cy"
+        const cx = Math.floor(pt.x / state.gridCell);
+        const cy = Math.floor(pt.y / state.gridCell);
+        return {cx, cy, key: cx + ':' + cy};
     };
 
     /**
@@ -325,23 +308,21 @@ function setupHover(self, data, state) {
      * Speeds up nearest-point queries by grouping points into grid cells.
      */
     state._rebuildHoverIndex = function () {
-        const idx = new Map(); // cell key -> array of candidate points
-        // Track overall bounds of the index for quick checks
+        const idx = new Map();
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
 
         for (const [nm, lyr] of Object.entries(state.geojsonLayers)) {
-            if (!state.geojsonHoverable[nm]) continue;        // only hoverable overlays
-            if (!state.map.hasLayer(lyr)) continue;           // only visible overlays
+            if (!state.geojsonHoverable[nm]) continue;
+            if (!state.map.hasLayer(lyr)) continue;
             try {
                 lyr.eachLayer(function (sub) {
                     if (sub && typeof sub.getLatLng === 'function') {
                         const ll = sub.getLatLng();
                         const pt = state.map.latLngToContainerPoint(ll);
                         if (!isFinite(pt.x) || !isFinite(pt.y)) return;
-                        const cell = state._cellKeyFromPoint(pt);    // which grid cell this point falls into
-                        if (!idx.has(cell.key)) idx.set(cell.key, []); // init cell array if needed
-                        // Store pixel coords and original feature for event payload
-                        idx.get(cell.key).push({x: pt.x, y: pt.y, latlng: ll, feature: sub.feature});
+                        const cell = state._cellKeyFromPoint(pt);
+                        if (!idx.has(cell.key)) idx.set(cell.key, []);
+                        idx.get(cell.key).push({x: pt.x, y: pt.y, latlng: ll});
                         if (pt.x < minX) minX = pt.x;
                         if (pt.x > maxX) maxX = pt.x;
                         if (pt.y < minY) minY = pt.y;

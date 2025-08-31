@@ -571,13 +571,12 @@ class LeafletCanvasScatter(ReactiveHTML):
         'https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css',
     ]
     __javascript__ = [
-        'https://unpkg.com/leaflet@1.7.1/dist/leaflet.js',
         'https://unpkg.com/chroma-js@2.4.2/chroma.min.js',
+        # leaflet 1.7.1 is the last version to support Measure control properly
+        'https://unpkg.com/leaflet@1.7.1/dist/leaflet.js',
         'https://unpkg.com/leaflet-draw/dist/leaflet.draw.js',
         'https://unpkg.com/leaflet-measure/dist/leaflet-measure.js',
         'https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js',
-        # Canvas-Scatter plugin
-        'https://unpkg.com/leaflet-canvas-marker@0.2.0/dist/leaflet.canvas-markers.min.js'
     ]
 
 
